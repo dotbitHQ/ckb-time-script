@@ -31,27 +31,6 @@ pub fn main() -> Result<(), Error> {
     }
 }
 
-fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
-    let script = load_script()?;
-    let type_script_exists_in_inputs = QueryIter::new(load_cell_type, Source::Input).any(
-        |type_script_opt| match type_script_opt {
-            Some(type_script) => {
-                type_script.code_hash().raw_data()[..] == script.code_hash().raw_data()[..]
-            }
-            None => false,
-        },
-    );
-    Ok(type_script_exists_in_inputs)
-}
-
-fn load_output_type_script<F>(closure: F) -> Result<(), Error> where F: Fn(Script) -> Result<(), Error>, {
-    match load_cell_type(0, Source::GroupOutput) {
-        Ok(Some(output_type_script)) => closure(output_type_script),
-        Ok(None) => Err(Error::TimeInfoTypeNotExist),
-        Err(_) => Err(Error::TimeInfoTypeNotExist),
-    }
-}
-
 fn load_output_index_state_type_args() -> Result<Bytes, Error> {
     match load_cell_type(0, Source::Output) {
         Ok(Some(output_type_script)) => {
@@ -74,14 +53,6 @@ fn check_info_cell_data() -> Result<(), Error> {
         }
         Err(_) => Err(Error::TimeInfoTypeNotExist),
     }
-}
-
-fn check_cells_type_scripts_valid() -> Result<(), Error> {
-    load_output_type_script(|_| match load_cell_type(0, Source::GroupInput) {
-        Ok(Some(_)) => Ok(()),
-        Ok(None) => Err(Error::TimeInfoTypeNotExist),
-        Err(_) => Err(Error::TimeInfoTypeNotExist),
-    })
 }
 
 fn check_info_cells_data() -> Result<(), Error> {
@@ -151,3 +122,33 @@ fn block_number_from_info_data(info_data: &Vec<u8>) -> u64 {
 fn is_info_data_len_invalid(info_data: &Vec<u8>) -> bool {
     info_data.len() != TIMESTAMP_DATA_LEN && info_data.len() != BLOCK_NUMBER_DATA_LEN
 }
+
+fn load_output_type_script<F>(closure: F) -> Result<(), Error> where F: Fn(Script) -> Result<(), Error>, {
+    match load_cell_type(0, Source::GroupOutput) {
+        Ok(Some(output_type_script)) => closure(output_type_script),
+        Ok(None) => Err(Error::TimeInfoTypeNotExist),
+        Err(_) => Err(Error::TimeInfoTypeNotExist),
+    }
+}
+
+fn check_cells_type_scripts_valid() -> Result<(), Error> {
+    load_output_type_script(|_| match load_cell_type(0, Source::GroupInput) {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => Err(Error::TimeInfoTypeNotExist),
+        Err(_) => Err(Error::TimeInfoTypeNotExist),
+    })
+}
+
+fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
+    let script = load_script()?;
+    let type_script_exists_in_inputs = QueryIter::new(load_cell_type, Source::Input).any(
+        |type_script_opt| match type_script_opt {
+            Some(type_script) => {
+                type_script.code_hash().raw_data()[..] == script.code_hash().raw_data()[..]
+            }
+            None => false,
+        },
+    );
+    Ok(type_script_exists_in_inputs)
+}
+

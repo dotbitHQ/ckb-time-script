@@ -31,29 +31,6 @@ pub fn main() -> Result<(), Error> {
     }
 }
 
-fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
-    let script = load_script()?;
-    let type_script_exists_in_inputs = QueryIter::new(load_cell_type, Source::Input).any(
-        |type_script_opt| match type_script_opt {
-            Some(type_script) => {
-                type_script.code_hash().raw_data()[..] == script.code_hash().raw_data()[..]
-            }
-            None => false,
-        },
-    );
-    Ok(type_script_exists_in_inputs)
-}
-
-fn load_output_type_script<F>(closure: F) -> Result<(), Error>
-where
-    F: Fn(Script) -> Result<(), Error>,
-{
-    match load_cell_type(0, Source::GroupOutput) {
-        Ok(Some(output_type_script)) => closure(output_type_script),
-        Ok(None) => Err(Error::IndexStateTypeNotExist),
-        Err(_) => Err(Error::IndexStateTypeNotExist),
-    }
-}
 
 // Index state cell data: index(u8) | sum_of_time_info_cells(u8)
 fn check_index_state_cell_data(source: Source) -> Result<Vec<u8>, Error> {
@@ -83,6 +60,14 @@ fn check_index_state_cells_data() -> Result<(), Error> {
     Ok(())
 }
 
+fn load_output_type_script<F>(closure: F) -> Result<(), Error> where F: Fn(Script) -> Result<(), Error>, {
+    match load_cell_type(0, Source::GroupOutput) {
+        Ok(Some(output_type_script)) => closure(output_type_script),
+        Ok(None) => Err(Error::IndexStateTypeNotExist),
+        Err(_) => Err(Error::IndexStateTypeNotExist),
+    }
+}
+
 fn check_cells_type_scripts_valid() -> Result<(), Error> {
     load_output_type_script(|_| match load_cell_type(0, Source::GroupInput) {
         Ok(Some(_)) => Ok(()),
@@ -90,3 +75,17 @@ fn check_cells_type_scripts_valid() -> Result<(), Error> {
         Err(_) => Err(Error::IndexStateTypeNotExist),
     })
 }
+
+fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
+    let script = load_script()?;
+    let type_script_exists_in_inputs = QueryIter::new(load_cell_type, Source::Input).any(
+        |type_script_opt| match type_script_opt {
+            Some(type_script) => {
+                type_script.code_hash().raw_data()[..] == script.code_hash().raw_data()[..]
+            }
+            None => false,
+        },
+    );
+    Ok(type_script_exists_in_inputs)
+}
+
