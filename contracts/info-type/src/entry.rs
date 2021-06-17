@@ -7,13 +7,13 @@ use ckb_std::{
 };
 use core::result::Result;
 
-const TIMESTAMP_DATA_LEN: usize = 5;
-const BLOCK_NUMBER_DATA_LEN: usize = 9;
+const TIMESTAMP_DATA_LEN: usize = 5; // 5 bytes = 10 hex = 2 + 8 hex = u8+u32
+const BLOCK_NUMBER_DATA_LEN: usize = 9; // 5 bytes = 18 hex = 2 + 16 hex = u8 + u64
 const INDEX_STATE_CELL_DATA_LEN: usize = 2;
 
 pub fn main() -> Result<(), Error> {
     if !check_type_script_exists_in_inputs()? {
-        // Create the time info cell and the input info type script doesn't exist
+        // Create the info cell and the input info type script doesn't exist
         load_output_type_script(|output_type_script| {
             let index_state_type_args = load_output_index_state_type_args()?;
             let info_type_args: Bytes = output_type_script.args().unpack();
@@ -23,7 +23,7 @@ pub fn main() -> Result<(), Error> {
             check_info_cell_data()
         })
     } else {
-        // Update the time info cell and the info type scripts of input and output exist
+        // Update the info cell and the info type scripts of input and output exist
         match check_cells_type_scripts_valid() {
             Ok(_) => check_info_cells_data(),
             Err(err) => Err(err),
@@ -44,10 +44,7 @@ fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
     Ok(type_script_exists_in_inputs)
 }
 
-fn load_output_type_script<F>(closure: F) -> Result<(), Error>
-where
-    F: Fn(Script) -> Result<(), Error>,
-{
+fn load_output_type_script<F>(closure: F) -> Result<(), Error> where F: Fn(Script) -> Result<(), Error>, {
     match load_cell_type(0, Source::GroupOutput) {
         Ok(Some(output_type_script)) => closure(output_type_script),
         Ok(None) => Err(Error::TimeInfoTypeNotExist),
@@ -66,7 +63,7 @@ fn load_output_index_state_type_args() -> Result<Bytes, Error> {
     }
 }
 
-// Time info cell data: index(u8) | timestamp(u32) or block number(u64)
+// Info cell data: index(u8) | timestamp(u32) or block number(u64)
 fn check_info_cell_data() -> Result<(), Error> {
     match load_cell_data(0, Source::GroupOutput) {
         Ok(info_data) => {

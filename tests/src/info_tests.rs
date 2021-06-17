@@ -38,15 +38,15 @@ fn build_index_state_cell_data(index: u8, is_data_len_err: bool) -> Bytes {
     Bytes::from(time_buf.to_vec())
 }
 
-struct TimeData {
+struct InfoData {
     timestamp: u32,
     block_number: u64,
 }
-fn build_time_info_cell_data(index: u8, time: TimeData) -> Bytes {
+fn build_time_info_cell_data(index: u8, time: InfoData) -> Bytes {
     if time.timestamp > 0 {
         let mut time_buf = BytesMut::with_capacity(TIMESTAMP_DATA_LEN);
         time_buf.put_u8(index);
-        time_buf.put_u32(time.timestamp);
+        time_buf.put_u32(time.timestamp); // todo: put_u64
         Bytes::from(time_buf.to_vec())
     } else if time.block_number > 0 {
         let mut time_buf = BytesMut::with_capacity(BLOCK_NUMBER_DATA_LEN);
@@ -277,7 +277,7 @@ fn test_create_info_timestamp_cells_success() {
         build_index_state_cell_data(2, false),
         build_time_info_cell_data(
             2,
-            TimeData {
+            InfoData {
                 timestamp: 1614828683,
                 block_number: 0,
             },
@@ -299,7 +299,7 @@ fn test_create_info_block_number_cells_success() {
         build_index_state_cell_data(2, false),
         build_time_info_cell_data(
             2,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -321,7 +321,7 @@ fn test_update_info_timestamp_cells_success() {
         build_index_state_cell_data(6, false),
         build_time_info_cell_data(
             6,
-            TimeData {
+            InfoData {
                 timestamp: 1614828683,
                 block_number: 0,
             },
@@ -331,7 +331,7 @@ fn test_update_info_timestamp_cells_success() {
         build_index_state_cell_data(7, false),
         build_time_info_cell_data(
             7,
-            TimeData {
+            InfoData {
                 timestamp: 1614829080,
                 block_number: 0,
             },
@@ -357,7 +357,7 @@ fn test_update_info_block_number_cells_success() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -367,7 +367,7 @@ fn test_update_info_block_number_cells_success() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             0,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10003,
             },
@@ -391,7 +391,7 @@ fn test_error_create_info_cells_invalid_args() {
         build_index_state_cell_data(2, false),
         build_time_info_cell_data(
             2,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -414,7 +414,7 @@ fn test_error_create_info_cell_data_len() {
         build_index_state_cell_data(2, false),
         build_time_info_cell_data(
             2,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 0,
             },
@@ -456,7 +456,7 @@ fn test_error_index_state_cell_data_len() {
         build_index_state_cell_data(2, true),
         build_time_info_cell_data(
             2,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 1000,
             },
@@ -498,7 +498,7 @@ fn test_error_info_type_not_exist() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -508,7 +508,7 @@ fn test_error_info_type_not_exist() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             0,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10003,
             },
@@ -533,7 +533,7 @@ fn test_error_info_index_not_same() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -543,7 +543,7 @@ fn test_error_info_index_not_same() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             1,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10003,
             },
@@ -568,7 +568,7 @@ fn test_error_output_block_number_not_bigger() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -578,7 +578,7 @@ fn test_error_output_block_number_not_bigger() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             0,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 999,
             },
@@ -622,7 +622,7 @@ fn test_error_output_block_number_since() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10000,
             },
@@ -632,7 +632,7 @@ fn test_error_output_block_number_since() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             0,
-            TimeData {
+            InfoData {
                 timestamp: 0,
                 block_number: 10004,
             },
@@ -676,7 +676,7 @@ fn test_error_output_timestamp_not_bigger() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 1614829080,
                 block_number: 0,
             },
@@ -686,7 +686,7 @@ fn test_error_output_timestamp_not_bigger() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             0,
-            TimeData {
+            InfoData {
                 timestamp: 1614829080,
                 block_number: 0,
             },
@@ -730,7 +730,7 @@ fn test_error_output_timestamp_since() {
         build_index_state_cell_data(11, false),
         build_time_info_cell_data(
             11,
-            TimeData {
+            InfoData {
                 timestamp: 1614829080,
                 block_number: 0,
             },
@@ -740,7 +740,7 @@ fn test_error_output_timestamp_since() {
         build_index_state_cell_data(0, false),
         build_time_info_cell_data(
             0,
-            TimeData {
+            InfoData {
                 timestamp: 1614829880,
                 block_number: 0,
             },

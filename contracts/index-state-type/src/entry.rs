@@ -7,12 +7,12 @@ use ckb_std::{
 };
 use core::result::Result;
 
-const SUM_OF_TIME_INFO_CELLS: u8 = 12;
+const SUM_OF_INFO_CELLS: u8 = 12;
 const INDEX_STATE_CELL_DATA_LEN: usize = 2;
 
 pub fn main() -> Result<(), Error> {
     if !check_type_script_exists_in_inputs()? {
-        // Create the time index state cell and the input type script doesn't exist
+        // Create the index state cell and the input type script doesn't exist
         load_output_type_script(|output_type_script| {
             let out_point = load_input_out_point(0, Source::Input)?;
             let type_args: Bytes = output_type_script.args().unpack();
@@ -23,7 +23,7 @@ pub fn main() -> Result<(), Error> {
             Ok(())
         })
     } else {
-        // Update the time index state cell and the type scripts of input and output exist
+        // Update the index state cell and the type scripts of input and output exist
         match check_cells_type_scripts_valid() {
             Ok(_) => check_index_state_cells_data(),
             Err(err) => Err(err),
@@ -55,16 +55,16 @@ where
     }
 }
 
-// Time index state cell data: index(u8) | sum_of_time_info_cells(u8)
+// Index state cell data: index(u8) | sum_of_time_info_cells(u8)
 fn check_index_state_cell_data(source: Source) -> Result<Vec<u8>, Error> {
     let data = load_cell_data(0, source)?;
     if data.len() != INDEX_STATE_CELL_DATA_LEN {
         return Err(Error::IndexStateDataLenError);
     }
-    if data[0] >= SUM_OF_TIME_INFO_CELLS {
+    if data[0] >= SUM_OF_INFO_CELLS {
         return Err(Error::TimeIndexOutOfBound);
     }
-    if data[1] != SUM_OF_TIME_INFO_CELLS {
+    if data[1] != SUM_OF_INFO_CELLS {
         return Err(Error::TimeInfoAmountError);
     }
     Ok(data)
@@ -73,7 +73,7 @@ fn check_index_state_cell_data(source: Source) -> Result<Vec<u8>, Error> {
 fn check_index_state_cells_data() -> Result<(), Error> {
     let input_data = check_index_state_cell_data(Source::GroupInput)?;
     let output_data = check_index_state_cell_data(Source::GroupOutput)?;
-    if input_data[0] == SUM_OF_TIME_INFO_CELLS - 1 {
+    if input_data[0] == SUM_OF_INFO_CELLS - 1 {
         if output_data[0] != 0 {
             return Err(Error::TimeIndexIncreaseError);
         }

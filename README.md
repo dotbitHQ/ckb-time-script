@@ -29,9 +29,9 @@ The time info cell data has two parts: index(uint8) and timestamp(uint32) or blo
 For example:
 
 ```
-0x06604884b8          // the time info cell data with index and timestamp
+0x06604884b8          // the info cell data with index and timestamp
 
-0x050000000000145030  // the time info cell data with index and block number
+0x050000000000145030  // the info cell data with index and block number
 ```
 
 > The timestamp and block number are big endian.
