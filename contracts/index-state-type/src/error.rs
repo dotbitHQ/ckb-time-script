@@ -9,9 +9,9 @@ pub enum Error {
     InvalidArgument = 5,
     IndexStateTypeNotExist,
     IndexStateDataLenError,
-    TimeInfoAmountError,
-    TimeIndexOutOfBound,
-    TimeIndexIncreaseError,
+    InfoAmountError,
+    IndexStateOutOfBound,
+    IndexIncreaseError,
 }
 
 impl From<SysError> for Error {

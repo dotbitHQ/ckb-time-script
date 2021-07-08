@@ -7,13 +7,31 @@ use ckb_std::{
 };
 use core::result::Result;
 
-const TIMESTAMP_DATA_LEN: usize = 5; // 5 bytes = 10 hex = 2 + 8 hex = u8+u32
-const BLOCK_NUMBER_DATA_LEN: usize = 9; // 5 bytes = 18 hex = 2 + 16 hex = u8 + u64
-const INDEX_STATE_CELL_DATA_LEN: usize = 2;
+const INFO_CELL_DATA_LEN: usize = 1 + 1 + 8; // index(u8)| data_type(u8) |content(u64)
+const INFO_CELL_META_LEN: usize =  1 + 1; // index(u8) | type(u8)
+const INFO_CELL_CONTENT_LEN: usize = INFO_CELL_DATA_LEN - INFO_CELL_META_LEN; // u64
+const INFO_CELL_META_INDEX_POS: usize = 0; // first byte is index
+const INFO_CELL_META_TYPE_POS: usize = 1; // second byte is content type
+
+const INDEX_STATE_CELL_DATA_LEN: usize = 1 + 1; // 2 bytes = u8 + u8, index|length
+
+enum DataType {
+    Arbitrage = 0,
+    Timestamp = 1,
+    BlockNumber = 2,
+}
 
 pub fn main() -> Result<(), Error> {
-    if !check_type_script_exists_in_inputs()? {
-        // Create the info cell and the input info type script doesn't exist
+    // update info cell
+    if check_type_script_exists_in_inputs()? {
+        // Update the info cell and the info type scripts of input and output exist
+        match check_cells_type_scripts_valid() {
+            Ok(_) => check_info_cells_data(),
+            Err(err) => Err(err),
+        }
+    }
+    // Create the info cell and the input info type script doesn't exist
+    else {
         load_output_type_script(|output_type_script| {
             let index_state_type_args = load_output_index_state_type_args()?;
             let info_type_args: Bytes = output_type_script.args().unpack();
@@ -22,12 +40,6 @@ pub fn main() -> Result<(), Error> {
             }
             check_info_cell_data()
         })
-    } else {
-        // Update the info cell and the info type scripts of input and output exist
-        match check_cells_type_scripts_valid() {
-            Ok(_) => check_info_cells_data(),
-            Err(err) => Err(err),
-        }
     }
 }
 
@@ -42,46 +54,45 @@ fn load_output_index_state_type_args() -> Result<Bytes, Error> {
     }
 }
 
-// Info cell data: index(u8) | timestamp(u32) or block number(u64)
+// Info cell data: index(u8) | type(u8) | DataType(u64)
 fn check_info_cell_data() -> Result<(), Error> {
     match load_cell_data(0, Source::GroupOutput) {
         Ok(info_data) => {
-            if is_info_data_len_invalid(&info_data) {
-                return Err(Error::TimeInfoDataLenError);
+            match is_info_data_len_valid(&info_data, &info_data) {
+                true => Ok(()),
+                false =>  Err(Error::InfoDataLenError)
             }
-            Ok(())
         }
-        Err(_) => Err(Error::TimeInfoTypeNotExist),
+        Err(_) => Err(Error::InfoTypeNotExist),
     }
 }
 
 fn check_info_cells_data() -> Result<(), Error> {
     // Note: Assuming that the first output must have index state type
-    let index_state_data = load_cell_data(0, Source::Output)?;
-    if index_state_data.len() != INDEX_STATE_CELL_DATA_LEN {
+    let output_index_state_data = load_cell_data(0, Source::Output)?;
+    if output_index_state_data.len() != INDEX_STATE_CELL_DATA_LEN {
         return Err(Error::IndexStateDataLenError);
     }
 
     let input_info_data = load_cell_data(0, Source::GroupInput)?;
     let output_info_data = load_cell_data(0, Source::GroupOutput)?;
 
-    if is_info_data_len_invalid(&output_info_data) {
-        return Err(Error::TimeInfoDataLenError);
+    if !is_info_data_len_valid(&input_info_data, &output_info_data) {
+        return Err(Error::InfoDataLenError);
     }
 
-    if output_info_data.len() != input_info_data.len() {
-        return Err(Error::TimeInfoDataLenError);
-    }
-
-    if output_info_data[0] != index_state_data[0] {
-        return Err(Error::TimeInfoIndexNotSame);
+    // the first u8 is index
+    if output_info_data[0] != output_index_state_data[0] {
+        return Err(Error::InfoIndexNotSame);
     }
 
     let since = load_input_since(0, Source::GroupInput)?;
+    let output_info_data_type = output_info_data[INFO_CELL_META_TYPE_POS];
 
-    if output_info_data.len() == TIMESTAMP_DATA_LEN {
-        let input_timestamp = timestamp_from_info_data(&input_info_data);
-        let output_timestamp = timestamp_from_info_data(&output_info_data);
+    // the second u8 is DataType
+    if output_info_data_type == DataType::Timestamp {
+        let input_timestamp = content_from_info_data(&input_info_data);
+        let output_timestamp = content_from_info_data(&output_info_data);
 
         if input_timestamp >= output_timestamp {
             return Err(Error::OutputTimestampNotBigger);
@@ -91,9 +102,10 @@ fn check_info_cells_data() -> Result<(), Error> {
         if since_timestamp_base + output_timestamp as u64 != since {
             return Err(Error::InvalidTimeInfoSince);
         }
-    } else if output_info_data.len() == BLOCK_NUMBER_DATA_LEN {
-        let input_block_number = block_number_from_info_data(&input_info_data);
-        let output_block_number = block_number_from_info_data(&output_info_data);
+    }
+    else if output_info_data_type == DataType::BlockNumber {
+        let input_block_number = content_from_info_data(&input_info_data);
+        let output_block_number = content_from_info_data(&output_info_data);
 
         if input_block_number >= output_block_number {
             return Err(Error::OutputBlockNumberNotBigger);
@@ -103,39 +115,36 @@ fn check_info_cells_data() -> Result<(), Error> {
             return Err(Error::InvalidTimeInfoSince);
         }
     }
+    else {
+        /* nothing here, maybe more validations in the future */
+    }
 
     Ok(())
 }
 
-fn timestamp_from_info_data(info_data: &Vec<u8>) -> u32 {
-    let mut timestamp_buf = [0u8; TIMESTAMP_DATA_LEN - 1];
-    timestamp_buf.copy_from_slice(&info_data[1..]);
-    u32::from_be_bytes(timestamp_buf)
+fn content_from_info_data(info_data: &Vec<u8>) -> u64 {
+    let mut content_buf = [0u8; INFO_CELL_CONTENT_LEN];
+    content_buf.copy_from_slice(&info_data[2..]);
+    u64::from_be_bytes(content_buf)
 }
 
-fn block_number_from_info_data(info_data: &Vec<u8>) -> u64 {
-    let mut block_number_buf = [0u8; BLOCK_NUMBER_DATA_LEN - 1];
-    block_number_buf.copy_from_slice(&info_data[1..]);
-    u64::from_be_bytes(block_number_buf)
-}
-
-fn is_info_data_len_invalid(info_data: &Vec<u8>) -> bool {
-    info_data.len() != TIMESTAMP_DATA_LEN && info_data.len() != BLOCK_NUMBER_DATA_LEN
+fn is_info_data_len_valid(input_info_data: &Vec<u8>, output_info_data: &Vec<u8>) -> bool {
+    input_info_data.len() == INFO_CELL_DATA_LEN && output_info_data.len() == INFO_CELL_DATA_LEN
 }
 
 fn load_output_type_script<F>(closure: F) -> Result<(), Error> where F: Fn(Script) -> Result<(), Error>, {
     match load_cell_type(0, Source::GroupOutput) {
         Ok(Some(output_type_script)) => closure(output_type_script),
-        Ok(None) => Err(Error::TimeInfoTypeNotExist),
-        Err(_) => Err(Error::TimeInfoTypeNotExist),
+        Ok(None) => Err(Error::InfoTypeNotExist),
+        Err(_) => Err(Error::InfoTypeNotExist),
     }
 }
 
 fn check_cells_type_scripts_valid() -> Result<(), Error> {
     load_output_type_script(|_| match load_cell_type(0, Source::GroupInput) {
         Ok(Some(_)) => Ok(()),
-        Ok(None) => Err(Error::TimeInfoTypeNotExist),
-        Err(_) => Err(Error::TimeInfoTypeNotExist),
+        Ok(None) => Err(Error::InfoTypeNotExist),
+        Err(_) => Err(Error::InfoTypeNotExist),
     })
 }
 
@@ -151,4 +160,3 @@ fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
     );
     Ok(type_script_exists_in_inputs)
 }
-
