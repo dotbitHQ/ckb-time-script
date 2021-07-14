@@ -10,9 +10,8 @@ use ckb_tool::ckb_types::{
 };
 use ckb_x64_simulator::RunningSetup;
 use std::collections::HashMap;
+use common::constants::*;
 
-const TIME_INDEX_CELL_DATA_LEN: usize = 2;
-const SUM_OF_TIME_INFO_CELLS: u8 = 12;
 const MAX_CYCLES: u64 = 10_000_000;
 
 // error numbers
@@ -24,7 +23,7 @@ const TIME_INDEX_OUT_OF_BOUND: i8 = 9;
 const TIME_INDEX_INCREASE_ERROR: i8 = 10;
 
 fn build_index_state_cell_data(index: u8, sum: u8) -> Bytes {
-    let mut time_buf = BytesMut::with_capacity(TIME_INDEX_CELL_DATA_LEN);
+    let mut time_buf = BytesMut::with_capacity(INDEX_STATE_CELL_DATA_LEN);
     time_buf.put_u8(index);
     time_buf.put_u8(sum);
     Bytes::from(time_buf.to_vec())
@@ -204,7 +203,7 @@ fn create_test_context_with_index_state_inputs(
 #[test]
 fn test_create_index_state_cells_success() {
     let outputs_data = vec![
-        build_index_state_cell_data(0, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(0, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, false);
@@ -234,9 +233,9 @@ fn test_create_index_state_cells_success() {
 
 #[test]
 fn test_update_index_state_cells_success() {
-    let input_data = build_index_state_cell_data(1, SUM_OF_TIME_INFO_CELLS);
+    let input_data = build_index_state_cell_data(1, SUM_OF_INFO_CELLS);
     let outputs_data = vec![
-        build_index_state_cell_data(2, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(2, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) =
@@ -267,9 +266,9 @@ fn test_update_index_state_cells_success() {
 
 #[test]
 fn test_update_full_index_state_cells_success() {
-    let input_data = build_index_state_cell_data(11, SUM_OF_TIME_INFO_CELLS);
+    let input_data = build_index_state_cell_data(35, SUM_OF_INFO_CELLS);
     let outputs_data = vec![
-        build_index_state_cell_data(0, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(0, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) =
@@ -363,7 +362,7 @@ fn test_error_info_amount() {
 #[test]
 fn test_error_index_out_of_bound() {
     let outputs_data = vec![
-        build_index_state_cell_data(13, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(36, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, false);
@@ -397,7 +396,7 @@ fn test_error_index_out_of_bound() {
 #[test]
 fn test_error_args_invalid() {
     let outputs_data = vec![
-        build_index_state_cell_data(0, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(0, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, true);
@@ -429,9 +428,9 @@ fn test_error_args_invalid() {
 
 #[test]
 fn test_error_type_of_cells_not_same() {
-    let input_data = build_index_state_cell_data(1, SUM_OF_TIME_INFO_CELLS);
+    let input_data = build_index_state_cell_data(1, SUM_OF_INFO_CELLS);
     let outputs_data = vec![
-        build_index_state_cell_data(2, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(2, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) =
@@ -447,9 +446,9 @@ fn test_error_type_of_cells_not_same() {
 
 #[test]
 fn test_error_index_not_increase() {
-    let input_data = build_index_state_cell_data(3, SUM_OF_TIME_INFO_CELLS);
+    let input_data = build_index_state_cell_data(3, SUM_OF_INFO_CELLS);
     let outputs_data = vec![
-        build_index_state_cell_data(2, SUM_OF_TIME_INFO_CELLS),
+        build_index_state_cell_data(2, SUM_OF_INFO_CELLS),
         Bytes::new(),
     ];
     let (mut context, tx) =

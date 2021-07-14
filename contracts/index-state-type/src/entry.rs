@@ -6,9 +6,7 @@ use ckb_std::{
     high_level,
 };
 use core::result::Result;
-
-const SUM_OF_INFO_CELLS: u8 = 12;
-const INDEX_STATE_CELL_DATA_LEN: usize = 1 + 1; // index(u8) + length(u8)
+use common::constants::*;
 
 pub fn main() -> Result<(), Error> {
     // update

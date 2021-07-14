@@ -10,12 +10,8 @@ use ckb_tool::ckb_types::{
 };
 
 use ckb_x64_simulator::RunningSetup;
+use common::constants::*;
 use std::collections::HashMap;
-
-const TIME_INDEX_CELL_DATA_LEN: usize = 2;
-const SUM_OF_TIME_INFO_CELLS: u8 = 12;
-const TIMESTAMP_DATA_LEN: usize = 5;
-const BLOCK_NUMBER_DATA_LEN: usize = 9;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
@@ -30,32 +26,27 @@ const OUTPUT_BLOCK_NUMBER_NOT_BIGGER: i8 = 11;
 const INVALID_TIME_INFO_SINCE: i8 = 12;
 
 fn build_index_state_cell_data(index: u8, is_data_len_err: bool) -> Bytes {
-    let mut time_buf = BytesMut::with_capacity(TIME_INDEX_CELL_DATA_LEN);
+    let mut time_buf = BytesMut::with_capacity(INDEX_STATE_CELL_DATA_LEN);
     time_buf.put_u8(index);
     if !is_data_len_err {
-        time_buf.put_u8(SUM_OF_TIME_INFO_CELLS);
+        time_buf.put_u8(SUM_OF_INFO_CELLS);
     }
     Bytes::from(time_buf.to_vec())
 }
 
-struct InfoData {
-    timestamp: u32,
-    block_number: u64,
+fn build_info_cell_data(index: u8, type_: DataType, data: u64) -> Bytes {
+    let mut time_buf = BytesMut::with_capacity(INFO_CELL_DATA_LEN);
+    time_buf.put_u8(index);
+    time_buf.put_u8(type_ as u8);
+    time_buf.put_u64(data);
+    Bytes::from(time_buf.to_vec())
 }
-fn build_time_info_cell_data(index: u8, time: InfoData) -> Bytes {
-    if time.timestamp > 0 {
-        let mut time_buf = BytesMut::with_capacity(TIMESTAMP_DATA_LEN);
-        time_buf.put_u8(index);
-        time_buf.put_u32(time.timestamp); // todo: put_u64
-        Bytes::from(time_buf.to_vec())
-    } else if time.block_number > 0 {
-        let mut time_buf = BytesMut::with_capacity(BLOCK_NUMBER_DATA_LEN);
-        time_buf.put_u8(index);
-        time_buf.put_u64(time.block_number);
-        Bytes::from(time_buf.to_vec())
-    } else {
-        Bytes::new()
-    }
+
+fn build_wrong_info_cell_data(index: u8, type_: DataType) -> Bytes {
+    let mut time_buf = BytesMut::with_capacity(INFO_CELL_DATA_LEN - 1);
+    time_buf.put_u8(index);
+    time_buf.put_u8(type_ as u8);
+    Bytes::from(time_buf.to_vec())
 }
 
 fn create_test_context(
@@ -275,13 +266,7 @@ fn create_test_context_with_info_inputs(
 fn test_create_info_timestamp_cells_success() {
     let outputs_data = vec![
         build_index_state_cell_data(2, false),
-        build_time_info_cell_data(
-            2,
-            InfoData {
-                timestamp: 1614828683,
-                block_number: 0,
-            },
-        ),
+        build_info_cell_data(2, DataType::Timestamp, 1614828683),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, false);
 
@@ -297,13 +282,7 @@ fn test_create_info_timestamp_cells_success() {
 fn test_create_info_block_number_cells_success() {
     let outputs_data = vec![
         build_index_state_cell_data(2, false),
-        build_time_info_cell_data(
-            2,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_info_cell_data(2, DataType::BlockNumber, 10000),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, false);
 
@@ -319,23 +298,11 @@ fn test_create_info_block_number_cells_success() {
 fn test_update_info_timestamp_cells_success() {
     let inputs_data = vec![
         build_index_state_cell_data(6, false),
-        build_time_info_cell_data(
-            6,
-            InfoData {
-                timestamp: 1614828683,
-                block_number: 0,
-            },
-        ),
+        build_info_cell_data(6, DataType::Timestamp, 1614828683),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(7, false),
-        build_time_info_cell_data(
-            7,
-            InfoData {
-                timestamp: 1614829080,
-                block_number: 0,
-            },
-        ),
+        build_info_cell_data(7, DataType::Timestamp, 1614829080),
     ];
     let since_timestamp_base: u64 = 1 << 62;
     let timestamp: u64 = 1614829080;
@@ -354,24 +321,12 @@ fn test_update_info_timestamp_cells_success() {
 #[test]
 fn test_update_info_block_number_cells_success() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::BlockNumber, 10000),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            0,
-            InfoData {
-                timestamp: 0,
-                block_number: 10003,
-            },
-        ),
+        build_info_cell_data(0, DataType::BlockNumber, 10003),
     ];
     let since: u64 = 10003;
     let (mut context, tx) =
@@ -389,13 +344,7 @@ fn test_update_info_block_number_cells_success() {
 fn test_error_create_info_cells_invalid_args() {
     let outputs_data = vec![
         build_index_state_cell_data(2, false),
-        build_time_info_cell_data(
-            2,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_info_cell_data(2, DataType::BlockNumber, 10000),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, true);
 
@@ -412,13 +361,7 @@ fn test_error_create_info_cells_invalid_args() {
 fn test_error_create_info_cell_data_len() {
     let outputs_data = vec![
         build_index_state_cell_data(2, false),
-        build_time_info_cell_data(
-            2,
-            InfoData {
-                timestamp: 0,
-                block_number: 0,
-            },
-        ),
+        build_wrong_info_cell_data(2, DataType::Timestamp),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, false);
 
@@ -454,13 +397,7 @@ fn test_error_create_info_cell_data_len() {
 fn test_error_index_state_cell_data_len() {
     let outputs_data = vec![
         build_index_state_cell_data(2, true),
-        build_time_info_cell_data(
-            2,
-            InfoData {
-                timestamp: 0,
-                block_number: 1000,
-            },
-        ),
+        build_info_cell_data(2, DataType::BlockNumber, 1000),
     ];
     let (mut context, tx) = create_test_context(&outputs_data, false);
 
@@ -495,24 +432,12 @@ fn test_error_index_state_cell_data_len() {
 #[test]
 fn test_error_info_type_not_exist() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::BlockNumber, 10000),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            0,
-            InfoData {
-                timestamp: 0,
-                block_number: 10003,
-            },
-        ),
+        build_info_cell_data(0, DataType::BlockNumber, 10003),
     ];
     let since: u64 = 10003;
     let (mut context, tx) =
@@ -530,24 +455,12 @@ fn test_error_info_type_not_exist() {
 #[test]
 fn test_error_info_index_not_same() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::BlockNumber, 10000),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            1,
-            InfoData {
-                timestamp: 0,
-                block_number: 10003,
-            },
-        ),
+        build_info_cell_data(1, DataType::BlockNumber, 10003),
     ];
     let since: u64 = 10003;
     let (mut context, tx) =
@@ -565,24 +478,12 @@ fn test_error_info_index_not_same() {
 #[test]
 fn test_error_output_block_number_not_bigger() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::BlockNumber, 10000),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            0,
-            InfoData {
-                timestamp: 0,
-                block_number: 999,
-            },
-        ),
+        build_info_cell_data(0, DataType::BlockNumber, 999),
     ];
     let since: u64 = 999;
     let (mut context, tx) =
@@ -619,24 +520,12 @@ fn test_error_output_block_number_not_bigger() {
 #[test]
 fn test_error_output_block_number_since() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 0,
-                block_number: 10000,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::BlockNumber, 10000),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            0,
-            InfoData {
-                timestamp: 0,
-                block_number: 10004,
-            },
-        ),
+        build_info_cell_data(0, DataType::BlockNumber, 10004),
     ];
     let since: u64 = 10030;
     let (mut context, tx) =
@@ -673,24 +562,12 @@ fn test_error_output_block_number_since() {
 #[test]
 fn test_error_output_timestamp_not_bigger() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 1614829080,
-                block_number: 0,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::Timestamp, 1614829080),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            0,
-            InfoData {
-                timestamp: 1614829080,
-                block_number: 0,
-            },
-        ),
+        build_info_cell_data(0, DataType::Timestamp, 1614829080),
     ];
     let since: u64 = 1614829080;
     let (mut context, tx) =
@@ -727,24 +604,12 @@ fn test_error_output_timestamp_not_bigger() {
 #[test]
 fn test_error_output_timestamp_since() {
     let inputs_data = vec![
-        build_index_state_cell_data(11, false),
-        build_time_info_cell_data(
-            11,
-            InfoData {
-                timestamp: 1614829080,
-                block_number: 0,
-            },
-        ),
+        build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, false),
+        build_info_cell_data(SUM_OF_INFO_CELLS - 1, DataType::Timestamp, 1614829080),
     ];
     let outputs_data = vec![
         build_index_state_cell_data(0, false),
-        build_time_info_cell_data(
-            0,
-            InfoData {
-                timestamp: 1614829880,
-                block_number: 0,
-            },
-        ),
+        build_info_cell_data(0, DataType::Timestamp, 1614829880),
     ];
     let since: u64 = 1614829580;
     let (mut context, tx) =
