@@ -297,12 +297,12 @@ fn test_create_info_block_number_cells_success() {
 #[test]
 fn test_update_info_timestamp_cells_success() {
     let inputs_data = vec![
-        build_index_state_cell_data(6, false),
-        build_info_cell_data(6, DataType::Timestamp, 1614828683),
+        build_index_state_cell_data(2, false),
+        build_info_cell_data(2, DataType::Timestamp, 1614828683),
     ];
     let outputs_data = vec![
-        build_index_state_cell_data(7, false),
-        build_info_cell_data(7, DataType::Timestamp, 1614829080),
+        build_index_state_cell_data(3, false),
+        build_info_cell_data(3, DataType::Timestamp, 1614829080),
     ];
     let since_timestamp_base: u64 = 1 << 62;
     let timestamp: u64 = 1614829080;

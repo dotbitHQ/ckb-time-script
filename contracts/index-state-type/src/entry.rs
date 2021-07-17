@@ -38,10 +38,13 @@ fn check_index_state_cell_data(source: Source) -> Result<Vec<u8>, Error> {
 }
 
 fn check_index_state_cells_data() -> Result<(), Error> {
-    let input_data = check_index_state_cell_data(Source::GroupInput)?;
+    // Due to the need for dynamic resizing SUM_OF_INFO_CELLS, do not check the data of input IndexStateCell anymore.
+    // let input_data = check_index_state_cell_data(Source::GroupInput)?;
+
+    let input_data = high_level::load_cell_data(0, Source::GroupInput)?;
     let output_data = check_index_state_cell_data(Source::GroupOutput)?;
 
-    if input_data[0] == SUM_OF_INFO_CELLS - 1 {
+    if input_data[0] >= SUM_OF_INFO_CELLS - 1 {
         if output_data[0] != 0 {
             return Err(Error::IndexIncreaseError);
         }

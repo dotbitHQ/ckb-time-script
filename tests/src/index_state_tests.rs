@@ -9,13 +9,12 @@ use ckb_tool::ckb_types::{
     prelude::*,
 };
 use ckb_x64_simulator::RunningSetup;
-use std::collections::HashMap;
 use common::constants::*;
+use std::collections::HashMap;
 
 const MAX_CYCLES: u64 = 10_000_000;
 
 // error numbers
-const INVALID_ARGUMENT: i8 = 5;
 const INDEX_STATE_TYPE_NOT_EXIST: i8 = 6;
 const INDEX_STATE_DATA_LEN_ERROR: i8 = 7;
 const TIME_INFO_AMOUNT_ERROR: i8 = 8;
@@ -266,7 +265,7 @@ fn test_update_index_state_cells_success() {
 
 #[test]
 fn test_update_full_index_state_cells_success() {
-    let input_data = build_index_state_cell_data(35, SUM_OF_INFO_CELLS);
+    let input_data = build_index_state_cell_data(SUM_OF_INFO_CELLS - 1, SUM_OF_INFO_CELLS);
     let outputs_data = vec![
         build_index_state_cell_data(0, SUM_OF_INFO_CELLS),
         Bytes::new(),
@@ -386,39 +385,6 @@ fn test_error_index_out_of_bound() {
     };
     write_native_setup(
         "test_error_index_out_of_bound",
-        "ckb-time-index-state-type-sim",
-        &tx,
-        &context,
-        &setup,
-    );
-}
-
-#[test]
-fn test_error_args_invalid() {
-    let outputs_data = vec![
-        build_index_state_cell_data(0, SUM_OF_INFO_CELLS),
-        Bytes::new(),
-    ];
-    let (mut context, tx) = create_test_context(&outputs_data, true);
-    let tx = context.complete_tx(tx);
-    // run
-    let err = context.verify_tx(&tx, MAX_CYCLES).unwrap_err();
-
-    let script_cell_index = 0;
-    assert_error_eq!(
-        err,
-        ScriptError::ValidationFailure(INVALID_ARGUMENT).output_type_script(script_cell_index)
-    );
-
-    // dump raw test tx files
-    let setup = RunningSetup {
-        is_lock_script: false,
-        is_output: true,
-        script_index: 0,
-        native_binaries: HashMap::default(),
-    };
-    write_native_setup(
-        "test_error_args_invalid",
         "ckb-time-index-state-type-sim",
         &tx,
         &context,
