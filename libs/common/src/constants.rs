@@ -1,4 +1,4 @@
-pub const SUM_OF_INFO_CELLS: u8 = 4;
+pub const SUM_OF_INFO_CELLS: u8 = 12;
 pub const INDEX_STATE_CELL_DATA_LEN: usize = 1 + 1; // index(u8) + length(u8)
 
 pub const INFO_CELL_DATA_LEN: usize = 1 + 1 + 8; // index(u8)| data_type(u8) |content(u64)
