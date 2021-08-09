@@ -181,7 +181,7 @@ fn create_test_context_with_index_state_inputs(
     outputs.push(
         CellOutput::new_builder()
             .capacity(500u64.pack())
-            .lock(lock_script)
+            .lock(lock_script.clone())
             .build(),
     );
 
@@ -445,4 +445,79 @@ fn test_error_index_not_increase() {
         &context,
         &setup,
     );
+}
+
+#[test]
+fn test_consume_index_state_cells() {
+    // deploy contract
+    let mut context = Context::default();
+    let index_state_bin: Bytes = Loader::default().load_binary("index-state-type");
+    let index_state_out_point = context.deploy_cell(index_state_bin);
+
+    // deploy always_success script
+    let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
+
+    // prepare scripts
+    let lock_script = context
+        .build_script(&always_success_out_point, Default::default())
+        .expect("script");
+    let lock_script_dep = CellDep::new_builder()
+        .out_point(always_success_out_point)
+        .build();
+
+    let args = Bytes::copy_from_slice(&[1]);
+    let index_state_type_script = context
+        .build_script(&index_state_out_point, args)
+        .expect("script");
+    let index_state_type_script_dep = CellDep::new_builder()
+        .out_point(index_state_out_point.clone())
+        .build();
+
+    let index_state_input_out_point_1 = context.create_cell(
+        CellOutput::new_builder()
+            .capacity(500u64.pack())
+            .lock(lock_script.clone())
+            .type_(Some(index_state_type_script.clone()).pack())
+            .build(),
+        build_index_state_cell_data(3, SUM_OF_INFO_CELLS),
+    );
+    let index_state_input_out_point_2 = context.create_cell(
+        CellOutput::new_builder()
+            .capacity(500u64.pack())
+            .lock(lock_script.clone())
+            .type_(Some(index_state_type_script.clone()).pack())
+            .build(),
+        build_index_state_cell_data(3, SUM_OF_INFO_CELLS),
+    );
+    let inputs = vec![
+        CellInput::new_builder()
+            .previous_output(index_state_input_out_point_1.clone())
+            .build(),
+        CellInput::new_builder()
+            .previous_output(index_state_input_out_point_2.clone())
+            .build(),
+    ];
+
+    let outputs = vec![CellOutput::new_builder()
+        .capacity(1000u64.pack())
+        .lock(lock_script.clone())
+        .build()];
+
+    // build transaction
+    let tx = TransactionBuilder::default()
+        .inputs(inputs)
+        .outputs(outputs)
+        .outputs_data(vec![Bytes::new()].pack())
+        .cell_dep(lock_script_dep)
+        .cell_dep(index_state_type_script_dep)
+        .witnesses(vec![Bytes::new(), Bytes::new()].pack())
+        .build();
+
+    let tx = context.complete_tx(tx);
+
+    // run
+    let cycles = context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
+    println!("consume cycles: {}", cycles);
 }

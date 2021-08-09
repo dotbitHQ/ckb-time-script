@@ -14,9 +14,12 @@ simulator/natives-index-state:
 simulator/natives-info:
 	CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort" RUSTDOCFLAGS="-Cpanic=abort" cargo build -p natives-info
 
-test: simulators
+sim: simulators
 	cargo test -p tests
 	./scripts/run_sim_tests.sh $(ENVIRONMENT)
+
+test:
+	cargo test -p tests
 
 coverage: test
 	zip -0 build/$(ENVIRONMENT)/ccov.zip `find . \( -name "ckb-time-scripts-sim*.gc*" \) -print`

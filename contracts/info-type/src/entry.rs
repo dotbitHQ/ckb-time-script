@@ -10,11 +10,16 @@ use core::result::Result;
 
 pub fn main() -> Result<(), Error> {
     // update info cell
-    if check_type_script_exists_in_inputs()? {
-        // Update the info cell and the info type scripts of input and output exist
-        match check_cells_type_scripts_valid() {
-            Ok(_) => check_info_cells_data(),
-            Err(err) => Err(err),
+    if check_type_script_exists(Source::Input)? {
+        if !(check_type_script_exists(Source::Output)?) {
+            // Cells can be recycled
+            Ok(())
+        } else {
+            // Update the info cell and the info type scripts of input and output exist
+            match check_cells_type_scripts_valid() {
+                Ok(_) => check_info_cells_data(),
+                Err(err) => Err(err),
+            }
         }
     }
     // Create the info cell and the input info type script doesn't exist
@@ -134,15 +139,14 @@ fn check_cells_type_scripts_valid() -> Result<(), Error> {
     })
 }
 
-fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
+fn check_type_script_exists(source: Source) -> Result<bool, Error> {
     let script = load_script()?;
-    let type_script_exists_in_inputs = QueryIter::new(load_cell_type, Source::Input).any(
-        |type_script_opt| match type_script_opt {
+    let type_script_exists =
+        QueryIter::new(load_cell_type, source).any(|type_script_opt| match type_script_opt {
             Some(type_script) => {
                 type_script.code_hash().raw_data()[..] == script.code_hash().raw_data()[..]
             }
             None => false,
-        },
-    );
-    Ok(type_script_exists_in_inputs)
+        });
+    Ok(type_script_exists)
 }

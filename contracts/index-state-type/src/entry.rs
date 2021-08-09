@@ -6,11 +6,16 @@ use core::result::Result;
 
 pub fn main() -> Result<(), Error> {
     // update
-    if check_type_script_exists_in_inputs()? {
-        // Update the index state cell and the type scripts of input and output exist
-        match check_cells_type_scripts_valid() {
-            Ok(_) => check_index_state_cells_data(),
-            Err(err) => Err(err),
+    if check_type_script_exists(Source::Input)? {
+        if !(check_type_script_exists(Source::Output)?) {
+            // Cells can be recycled
+            Ok(())
+        } else {
+            // Update the index state cell and the type scripts of input and output exist
+            match check_cells_type_scripts_valid() {
+                Ok(_) => check_index_state_cells_data(),
+                Err(err) => Err(err),
+            }
         }
     }
     // Create the index state cell and the input type script doesn't exist
@@ -75,16 +80,16 @@ fn check_cells_type_scripts_valid() -> Result<(), Error> {
     )
 }
 
-fn check_type_script_exists_in_inputs() -> Result<bool, Error> {
+fn check_type_script_exists(source: Source) -> Result<bool, Error> {
     let script = high_level::load_script()?;
-    let type_script_exists_in_inputs =
-        high_level::QueryIter::new(high_level::load_cell_type, Source::Input).any(
-            |type_script_opt| match type_script_opt {
+    let type_script_exists =
+        high_level::QueryIter::new(high_level::load_cell_type, source).any(|type_script_opt| {
+            match type_script_opt {
                 Some(type_script) => {
                     type_script.code_hash().raw_data()[..] == script.code_hash().raw_data()[..]
                 }
                 None => false,
-            },
-        );
-    Ok(type_script_exists_in_inputs)
+            }
+        });
+    Ok(type_script_exists)
 }

@@ -642,3 +642,75 @@ fn test_error_output_timestamp_since() {
         &setup,
     );
 }
+
+#[test]
+fn test_consume_info_cells() {
+    let mut context = Context::default();
+    let info_bin: Bytes = Loader::default().load_binary("info-type");
+    let info_out_point = context.deploy_cell(info_bin);
+
+    // deploy always_success script
+    let always_success_out_point = context.deploy_cell(ALWAYS_SUCCESS.clone());
+
+    // prepare scripts
+    let lock_script = context
+        .build_script(&always_success_out_point, Default::default())
+        .expect("script");
+    let lock_script_dep = CellDep::new_builder()
+        .out_point(always_success_out_point)
+        .build();
+
+    let args = Bytes::copy_from_slice(&[1]);
+    let info_type_script = context.build_script(&info_out_point, args).expect("script");
+    let info_type_script_dep = CellDep::new_builder()
+        .out_point(info_out_point.clone())
+        .build();
+
+    let info_input_out_point_1 = context.create_cell(
+        CellOutput::new_builder()
+            .capacity(500u64.pack())
+            .lock(lock_script.clone())
+            .type_(Some(info_type_script.clone()).pack())
+            .build(),
+        build_info_cell_data(0, DataType::Timestamp, 1614829080),
+    );
+    let info_input_out_point_2 = context.create_cell(
+        CellOutput::new_builder()
+            .capacity(500u64.pack())
+            .lock(lock_script.clone())
+            .type_(Some(info_type_script.clone()).pack())
+            .build(),
+        build_info_cell_data(0, DataType::Timestamp, 1614829080),
+    );
+    let inputs = vec![
+        CellInput::new_builder()
+            .previous_output(info_input_out_point_1)
+            .build(),
+        CellInput::new_builder()
+            .previous_output(info_input_out_point_2)
+            .build(),
+    ];
+
+    let outputs = vec![CellOutput::new_builder()
+        .capacity(1000u64.pack())
+        .lock(lock_script)
+        .build()];
+
+    // build transaction
+    let tx = TransactionBuilder::default()
+        .inputs(inputs)
+        .outputs(outputs)
+        .outputs_data(vec![Bytes::new()].pack())
+        .cell_dep(lock_script_dep)
+        .cell_dep(info_type_script_dep)
+        .witnesses(vec![Bytes::new(), Bytes::new()].pack())
+        .build();
+
+    let tx = context.complete_tx(tx);
+
+    // run
+    let cycles = context
+        .verify_tx(&tx, MAX_CYCLES)
+        .expect("pass verification");
+    println!("consume cycles: {}", cycles);
+}
