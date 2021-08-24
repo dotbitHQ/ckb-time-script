@@ -1,0 +1,28 @@
+{
+  "cell_recipes": [
+    {
+      "name": "index-state-type",
+      "tx_hash": "0xe9116d651c371662b6e29e2102422e23f90656b8619df82c48b782ff4db43a37",
+      "index": 0,
+      "occupied_capacity": 2338800000000,
+      "data_hash": "0xb575f6dd6417d4f7c52fd9e3a96824130302751c78ac10d1d0d35cd4b507bbae",
+      "type_id": "0x3a468d53352eb855521dabed0dc7036929bfe72766ad58f801edfbae564f7b43"
+    },
+    {
+      "name": "info-type",
+      "tx_hash": "0x5fe11c5033f7494667f23ae8759762f196105eb3240d26a65f805831b4b26a16",
+      "index": 0,
+      "occupied_capacity": 2342800000000,
+      "data_hash": "0x1871b6ecbe086e0c0a5298b653de8bd7efb223c1f7927f41ad8b13de848b7209",
+      "type_id": "0x9e537bf5b8ec044ca3f53355e879f3fd8832217e4a9b41d9994cf0c547241a79"
+    }
+  ],
+  "dep_group_recipes": [
+    {
+      "name": "oracle_dep_groups",
+      "tx_hash": "0x73d85dde3923672f0b157f0ba119e891065ecdf6d07d024be6240b8da68600a5",
+      "index": 0,
+      "occupied_capacity": 13700000000
+    }
+  ]
+}
